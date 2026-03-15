@@ -1,0 +1,37 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0f1117;
+  color: #e2e8f0;
+}
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d2e;
+  --surface2: #222640;
+  --border: #2d3154;
+  --accent: #6366f1;
+  --accent2: #8b5cf6;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --cyan: #06b6d4;
+  --text: #e2e8f0;
+  --muted: #64748b;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+select, input[type=range] {
+  font-family: inherit;
+}
