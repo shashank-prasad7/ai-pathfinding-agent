@@ -1,7 +1,7 @@
 # Pathfinding Agent — Intelligent Search Visualizer
 
 A* | BFS | Greedy Best First Search  
-React + Vite Frontend — FastAPI Python Backend
+React + Vite Frontend and FastAPI Python Backend
 
 ---
 
