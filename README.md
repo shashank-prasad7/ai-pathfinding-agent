@@ -1,6 +1,6 @@
 # Pathfinding Agent — Intelligent Search Visualizer
 
-A* | BFS | Greedy Best First Search  
+A* | BFS | Greedy Best First Search | **Algorithm Race Mode**
 React + Vite Frontend and FastAPI Python Backend
 
 ---
@@ -18,9 +18,11 @@ pathfinder/
     ├── package.json
     └── src/
         ├── main.jsx
-        ├── App.jsx           ← Full UI
-        ├── App.module.css    ← All styles
-        ├── usePathfinder.js  ← Grid state + animation logic
+        ├── App.jsx           ← Main UI entry
+        ├── App.module.css    ← Integrated styles
+        ├── usePathfinder.js  ← Single-mode state logic
+        ├── useRacePathfinder.js ← Multi-grid race logic [NEW]
+        ├── pathfinderRunner.js  ← Shared animation & API helpers [NEW]
         └── index.css
 ```
 
@@ -57,15 +59,16 @@ Frontend runs at → http://localhost:5173
 
 ## How to Use
 
-1. **Draw walls** — click and drag on the grid
-2. **Move start/end** — switch mode in sidebar, then click a cell
-3. **Choose algorithm** — A*, BFS, or Greedy Best First
-4. **Choose heuristic** — Manhattan or Euclidean (for A* and Greedy)
-5. **Click Solve** — watch the agent search in real time
-6. **Hover explored cells** — see f(n), g(n), h(n) in Cell Inspector
-7. **🎲 Maze** — generate random walls
-8. **Clear Path** — keep walls, reset animation
-9. **Reset** — full clear
+1. **Draw walls** — click and drag on the grid.
+2. **Move start/end** — switch mode in sidebar, then click a cell.
+3. **Choose algorithm** — A*, BFS, or Greedy (in Single mode).
+4. **Choose heuristic** — Manhattan or Euclidean.
+5. **Switch to RACE Mode** — click the "Race" tab in the sidebar to compare A*, BFS, and Greedy simultaneously side-by-side.
+6. **Click Solve / Start Race** — watch the agent search in real time.
+7. **Hover explored cells** — see f(n), g(n), h(n) in the Cell Inspector.
+8. **🎲 Maze** — generate random wall patterns.
+9. **Clear Path** — keep your walls but reset the search animation.
+10. **Reset** — full clear of the grid and results.
 
 ---
 
