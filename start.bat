@@ -9,7 +9,13 @@ echo.
 
 :: Start Backend in a new window
 echo  [1/2] Starting Backend (FastAPI)...
-start "Pathfinding - Backend" cmd /k "cd /d %~dp0backend && py -m uvicorn main:app --reload --port 8000"
+if exist "%~dp0backend\venv\Scripts\python.exe" (
+    echo  Virtual environment found, using it...
+    start "Pathfinding - Backend" cmd /k "cd /d %~dp0backend && venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000"
+) else (
+    echo  No virtual environment found, using system Python...
+    start "Pathfinding - Backend" cmd /k "cd /d %~dp0backend && py -m uvicorn main:app --reload --port 8000"
+)
 
 :: Wait 2 seconds for backend to initialize
 timeout /t 2 /nobreak > nul
