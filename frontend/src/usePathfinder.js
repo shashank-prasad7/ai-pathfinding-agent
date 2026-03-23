@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from 'react'
+import { animateSolveResult, clearAnimationTimer, fetchSolve } from './pathfinderRunner'
 
-const ROWS = 22
-const COLS = 40
+export const ROWS = 22
+export const COLS = 40
 
-const CELL = {
+export const CELL = {
   EMPTY: 0,
   WALL: 1,
   START: 2,
@@ -12,7 +13,7 @@ const CELL = {
   PATH: 5,
 }
 
-function makeGrid() {
+export function makeGrid() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(CELL.EMPTY))
 }
 
@@ -105,7 +106,7 @@ export function usePathfinder() {
   }, [])
 
   const cancelAnimation = () => {
-    if (animRef.current) clearTimeout(animRef.current)
+    clearAnimationTimer(animRef)
     setIsRunning(false)
   }
 
@@ -134,19 +135,14 @@ export function usePathfinder() {
     ))
 
     try {
-      const res = await fetch('/solve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          grid: rawGrid,
-          start,
-          end,
-          algorithm,
-          heuristic,
-          allow_diagonal: diagonal,
-        })
+      const data = await fetchSolve({
+        grid: rawGrid,
+        start,
+        end,
+        algorithm,
+        heuristic,
+        allow_diagonal: diagonal,
       })
-      const data = await res.json()
       detailsRef.current = data.explored_details || []
 
       setStats({
@@ -157,56 +153,21 @@ export function usePathfinder() {
         algorithm: data.algorithm,
       })
 
-      animateResult(data.explored, data.path, data.found)
+      animateSolveResult({
+        explored: data.explored,
+        path: data.path,
+        found: data.found,
+        speed,
+        timerRef: animRef,
+        setGrid,
+        CELL,
+        onDone: () => setIsRunning(false),
+      })
     } catch (e) {
       console.error(e)
       setIsRunning(false)
     }
-  }, [grid, start, end, algorithm, heuristic, diagonal, clearPath])
-
-  const animateResult = (explored, path, found) => {
-    let i = 0
-
-    const step = () => {
-      if (i < explored.length) {
-        const [r, c] = explored[i]
-        setGrid(prev => {
-          const g = prev.map(row => [...row])
-          if (g[r][c] !== CELL.START && g[r][c] !== CELL.END) {
-            g[r][c] = CELL.EXPLORED
-          }
-          return g
-        })
-        i++
-        animRef.current = setTimeout(step, speed)
-      } else {
-        // Draw final path
-        if (found) {
-          let j = 0
-          const drawPath = () => {
-            if (j < path.length) {
-              const [r, c] = path[j]
-              setGrid(prev => {
-                const g = prev.map(row => [...row])
-                if (g[r][c] !== CELL.START && g[r][c] !== CELL.END) {
-                  g[r][c] = CELL.PATH
-                }
-                return g
-              })
-              j++
-              animRef.current = setTimeout(drawPath, speed * 2)
-            } else {
-              setIsRunning(false)
-            }
-          }
-          drawPath()
-        } else {
-          setIsRunning(false)
-        }
-      }
-    }
-    step()
-  }
+  }, [grid, start, end, algorithm, heuristic, diagonal, clearPath, speed])
 
   return {
     grid, CELL,

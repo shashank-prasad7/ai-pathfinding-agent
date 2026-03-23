@@ -1,4 +1,6 @@
 import { usePathfinder } from './usePathfinder'
+import { useRacePathfinder } from './useRacePathfinder'
+import { useState } from 'react'
 import styles from './App.module.css'
 
 // ── Cell color map ───────────────────────────────────────────────
@@ -25,7 +27,13 @@ const MODE_BTNS = [
 ]
 
 export default function App() {
-  const pf = usePathfinder()
+  const single = usePathfinder()
+  const race = useRacePathfinder()
+  const [viewMode, setViewMode] = useState('single')
+
+  const isRace = viewMode === 'race'
+  const pf = isRace ? race : single
+  const activeAlgo = isRace ? 'astar' : pf.algorithm
 
   return (
     <div className={styles.app}>
@@ -36,31 +44,56 @@ export default function App() {
           <span className={styles.subtitle}>Intelligent Search Visualizer</span>
         </div>
         <div className={styles.algoTag}>
-          <span className={styles.algoName}>{ALGO_LABELS[pf.algorithm].name}</span>
-          <span className={styles.algoBadge}>{ALGO_LABELS[pf.algorithm].tag}</span>
+          <span className={styles.algoName}>
+            {isRace ? 'Algorithm Race Mode' : ALGO_LABELS[pf.algorithm].name}
+          </span>
+          <span className={styles.algoBadge}>
+            {isRace ? 'A* vs BFS vs Greedy' : ALGO_LABELS[pf.algorithm].tag}
+          </span>
         </div>
       </header>
 
       <div className={styles.layout}>
         {/* ── Sidebar ── */}
         <aside className={styles.sidebar}>
-
-          {/* Algorithm */}
           <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Algorithm</h3>
-            <div className={styles.radioGroup}>
-              {Object.entries(ALGO_LABELS).map(([id, { name }]) => (
-                <label key={id} className={`${styles.radioBtn} ${pf.algorithm === id ? styles.active : ''}`}>
-                  <input type="radio" value={id} checked={pf.algorithm === id}
-                    onChange={() => pf.setAlgorithm(id)} hidden />
-                  {name}
-                </label>
-              ))}
+            <h3 className={styles.sectionTitle}>View</h3>
+            <div className={styles.modeToggle}>
+              <button
+                className={`${styles.modeToggleBtn} ${!isRace ? styles.activeModeBtn : ''}`}
+                onClick={() => setViewMode('single')}
+                disabled={pf.isRunning}
+              >
+                Single
+              </button>
+              <button
+                className={`${styles.modeToggleBtn} ${isRace ? styles.activeModeBtn : ''}`}
+                onClick={() => setViewMode('race')}
+                disabled={pf.isRunning}
+              >
+                Race
+              </button>
             </div>
           </section>
 
+          {/* Algorithm */}
+          {!isRace && (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>Algorithm</h3>
+              <div className={styles.radioGroup}>
+                {Object.entries(ALGO_LABELS).map(([id, { name }]) => (
+                  <label key={id} className={`${styles.radioBtn} ${pf.algorithm === id ? styles.active : ''}`}>
+                    <input type="radio" value={id} checked={pf.algorithm === id}
+                      onChange={() => pf.setAlgorithm(id)} hidden />
+                    {name}
+                  </label>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Heuristic (hide for BFS) */}
-          {pf.algorithm !== 'bfs' && (
+          {(isRace || pf.algorithm !== 'bfs') && (
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>Heuristic h(n)</h3>
               <div className={styles.radioGroup}>
@@ -108,19 +141,24 @@ export default function App() {
           {/* Actions */}
           <section className={styles.section}>
             <button className={styles.solveBtn}
-              onClick={pf.isRunning ? undefined : pf.solve}
+              onClick={pf.isRunning ? undefined : (isRace ? pf.solveRace : pf.solve)}
               disabled={pf.isRunning}>
-              {pf.isRunning ? '⏳ Solving...' : '▶ Solve'}
+              {pf.isRunning ? (isRace ? '⏳ Racing...' : '⏳ Solving...') : (isRace ? '▶ Start Race' : '▶ Solve')}
             </button>
             <div className={styles.actionRow}>
-              <button className={styles.secondaryBtn} onClick={pf.clearPath}>Clear Path</button>
+              {isRace && (
+                <button className={styles.secondaryBtn} onClick={pf.cancelAnimation}>
+                  Stop
+                </button>
+              )}
               <button className={styles.secondaryBtn} onClick={pf.generateMaze}>🎲 Maze</button>
+              <button className={styles.secondaryBtn} onClick={pf.clearPath}>Clear Path</button>
               <button className={styles.dangerBtn} onClick={pf.clearAll}>Reset</button>
             </div>
           </section>
 
           {/* Stats */}
-          {pf.stats && (
+          {!isRace && pf.stats && (
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>Results</h3>
               <div className={styles.statsGrid}>
@@ -133,10 +171,30 @@ export default function App() {
             </section>
           )}
 
+          {isRace && (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>Race Results</h3>
+              <div className={styles.raceStatsList}>
+                {race.algorithms.map(algo => (
+                  <RaceStatRow
+                    key={algo}
+                    title={ALGO_LABELS[algo].name}
+                    stats={race.statsByAlgo[algo]}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Cell Inspector */}
           {pf.cellInfo && (
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>Cell Inspector</h3>
+              {isRace && (
+                <div className={styles.inspectorAlgoLabel}>
+                  {ALGO_LABELS[pf.cellInfo.algorithm].name}
+                </div>
+              )}
               <div className={styles.inspector}>
                 <InspRow label="f(n) = g + h" value={pf.cellInfo.f} color="#6366f1" />
                 <InspRow label="g(n) actual cost" value={pf.cellInfo.g} color="#10b981" />
@@ -162,26 +220,53 @@ export default function App() {
 
         {/* ── Grid ── */}
         <main className={styles.main}>
-          <div
-            className={styles.grid}
-            onMouseLeave={pf.handleMouseUp}
-            onMouseUp={pf.handleMouseUp}
-          >
-            {pf.grid.map((row, r) =>
-              row.map((cell, c) => (
-                <div
-                  key={`${r}-${c}`}
-                  className={`${styles.cell} ${styles[CELL_CLASS[cell]]}`}
-                  onMouseDown={() => pf.handleMouseDown(r, c)}
-                  onMouseEnter={() => pf.handleMouseEnter(r, c)}
-                />
-              ))
-            )}
-          </div>
+          {!isRace && (
+            <div
+              className={styles.grid}
+              onMouseLeave={pf.handleMouseUp}
+              onMouseUp={pf.handleMouseUp}
+            >
+              {pf.grid.map((row, r) =>
+                row.map((cell, c) => (
+                  <div
+                    key={`${r}-${c}`}
+                    className={`${styles.cell} ${styles[CELL_CLASS[cell]]}`}
+                    onMouseDown={() => pf.handleMouseDown(r, c)}
+                    onMouseEnter={() => pf.handleMouseEnter(r, c)}
+                  />
+                ))
+              )}
+            </div>
+          )}
+
+          {isRace && (
+            <div className={styles.raceGridWrap} onMouseLeave={pf.handleMouseUp} onMouseUp={pf.handleMouseUp}>
+              {race.algorithms.map(algo => (
+                <section key={algo} className={styles.racePanel}>
+                  <header className={styles.racePanelHeader}>
+                    <strong>{ALGO_LABELS[algo].name}</strong>
+                    <span>{ALGO_LABELS[algo].tag}</span>
+                  </header>
+                  <div className={styles.raceGrid}>
+                    {race.raceGrids[algo].map((row, r) =>
+                      row.map((cell, c) => (
+                        <div
+                          key={`${algo}-${r}-${c}`}
+                          className={`${styles.cell} ${styles[CELL_CLASS[cell]]}`}
+                          onMouseDown={() => pf.handleMouseDown(r, c)}
+                          onMouseEnter={() => pf.handleRaceMouseEnter(algo, r, c)}
+                        />
+                      ))
+                    )}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
 
           {/* Algorithm explainer bar */}
           <div className={styles.explainer}>
-            <AlgoExplainer algorithm={pf.algorithm} heuristic={pf.heuristic} />
+            <AlgoExplainer algorithm={activeAlgo} heuristic={pf.heuristic} race={isRace} />
           </div>
         </main>
       </div>
@@ -217,11 +302,34 @@ function LegendItem({ color, label, border }) {
   )
 }
 
-function AlgoExplainer({ algorithm, heuristic }) {
+function AlgoExplainer({ algorithm, heuristic, race }) {
+  if (race) {
+    return (
+      <p className={styles.explainerText}>
+        Race mode runs A*, BFS, and Greedy simultaneously on the same map. Compare explored nodes,
+        final path, and runtime side by side to see the trade-offs between optimality and speed.
+      </p>
+    )
+  }
+
   const info = {
     astar: `A* evaluates f(n) = g(n) + h(n). g(n) is the actual cost from start. h(n) is the ${heuristic} heuristic estimate to goal. Expands the node with the lowest f — guaranteed optimal if h is admissible.`,
     bfs: `BFS explores all nodes level by level using a FIFO queue. g(n) = depth level, h(n) = 0 (uninformed). Guaranteed to find the shortest path in unweighted graphs. Time & Space: O(b^d).`,
     greedy: `Greedy Best First uses only h(n) — the heuristic — to decide the next node. Fastest but NOT guaranteed optimal. It rushes toward the goal without considering path cost g(n).`,
   }
   return <p className={styles.explainerText}>{info[algorithm]}</p>
+}
+
+function RaceStatRow({ title, stats }) {
+  return (
+    <div className={styles.raceStatRow}>
+      <strong>{title}</strong>
+      {!stats && <span>Not run yet</span>}
+      {stats && (
+        <span>
+          N:{stats.nodes_explored} | P:{stats.path_length || 0} | T:{stats.time_ms}ms | {stats.found ? 'Found' : 'No Path'}
+        </span>
+      )}
+    </div>
+  )
 }
