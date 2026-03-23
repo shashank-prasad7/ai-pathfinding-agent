@@ -163,6 +163,7 @@ def bfs(grid, start, end, allow_diagonal):
     start, end = tuple(start), tuple(end)
     queue = deque([start])
     came_from = {}
+    g_score = {start: 0}
     visited = {start}
 
     explored = []
@@ -170,7 +171,7 @@ def bfs(grid, start, end, allow_diagonal):
 
     while queue:
         current = queue.popleft()
-        g = len(reconstruct_path(came_from, current)) - 1 if current in came_from else 0
+        g = g_score[current]
         explored.append(list(current))
         explored_details.append(StepInfo(node=list(current), g=g, h=0, f=g))
 
@@ -183,6 +184,7 @@ def bfs(grid, start, end, allow_diagonal):
             if neighbor not in visited:
                 visited.add(neighbor)
                 came_from[neighbor] = current
+                g_score[neighbor] = g + 1
                 queue.append(neighbor)
 
     return explored, explored_details, [], False
