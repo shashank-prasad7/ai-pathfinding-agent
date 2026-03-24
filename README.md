@@ -3,6 +3,8 @@
 A* | BFS | Greedy Best First Search | **Algorithm Race Mode**
 React + Vite Frontend and FastAPI Python Backend
 
+🔴 **Live Demo** → https://ai-pathfinding-agent.vercel.app/
+
 ---
 
 ## Project Structure
